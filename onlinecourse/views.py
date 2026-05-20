@@ -1,12 +1,11 @@
-from django.shortcuts import render
+import logging
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponseRedirect
-from .models import Course, Enrollment, Question, Choice, Submission
-from django.contrib.auth.models import User
-from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.views import generic
 from django.contrib.auth import login, logout, authenticate
-import logging
+from django.contrib.auth.models import User
+from .models import Course, Enrollment, Question, Choice, Submission
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +22,9 @@ def registration_request(request):
         try:
             User.objects.get(username=username)
             user_exist = True
-        except:
-            logger.error("New user")
+        except User.DoesNotExist:
+            logger.error("New user registration processing")
+        
         if not user_exist:
             user = User.objects.create_user(username=username, first_name=first_name, last_name=last_name, password=password)
             login(request, user)
@@ -63,6 +63,7 @@ def check_if_enrolled(user, course):
 class CourseListView(generic.ListView):
     template_name = 'onlinecourse/course_list_bootstrap.html'
     context_object_name = 'course_list'
+    
     def get_queryset(self):
         user = self.request.user
         courses = Course.objects.order_by('-total_enrollment')[:10]
@@ -74,6 +75,18 @@ class CourseListView(generic.ListView):
 class CourseDetailView(generic.DetailView):
     model = Course
     template_name = 'onlinecourse/course_detail_bootstrap.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        course = context['course']
+        user = self.request.user
+        # Calculate and manually attach the dynamic property for your HTML check
+        if user.is_authenticated:
+            course.is_enrolled = check_if_enrolled(user, course)
+        else:
+            course.is_enrolled = False
+        context['course'] = course
+        return context
 
 def enroll(request, course_id):
     course = get_object_or_404(Course, pk=course_id)
@@ -88,7 +101,7 @@ def enroll(request, course_id):
 def extract_answers(request):
     submitted_answers = []
     for key in request.POST:
-        if key.startswith('choice'):
+        if key.startswith('choice_'):
             value = request.POST[key]
             choice_id = int(value)
             submitted_answers.append(choice_id)

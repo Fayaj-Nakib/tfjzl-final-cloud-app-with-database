@@ -1,20 +1,14 @@
 from django.contrib import admin
 from .models import Course, Lesson, Instructor, Learner, Question, Choice, Submission
 
-# Inline Model Configurations
 class LessonInline(admin.StackedInline):
     model = Lesson
-    extra = 5
+    extra = 2
 
 class ChoiceInline(admin.StackedInline):
     model = Choice
     extra = 2
 
-class QuestionInline(admin.StackedInline):
-    model = Question
-    extra = 2
-
-# ModelAdmin Model Control Panels
 class CourseAdmin(admin.ModelAdmin):
     inlines = [LessonInline]
     list_display = ('name', 'pub_date')
@@ -25,12 +19,8 @@ class QuestionAdmin(admin.ModelAdmin):
     inlines = [ChoiceInline]
     list_display = ['content']
 
-class LessonAdmin(admin.ModelAdmin):
-    list_display = ['title']
-
-# Model Registrations
 admin.site.register(Course, CourseAdmin)
-admin.site.register(Lesson, LessonAdmin)
+admin.site.register(Lesson)
 admin.site.register(Instructor)
 admin.site.register(Learner)
 admin.site.register(Question, QuestionAdmin)
